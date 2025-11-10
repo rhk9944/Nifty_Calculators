@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nifty 50 - Weekly Trend Predictor</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #38bdf8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #334155;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: #1e293b;
+      color: #f1f5f9;
+    }
+    input {
+      width: 100%;
+      padding: 5px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: white;
+      text-align: right;
+    }
+    button {
+      background: #38bdf8;
+      border: none;
+      padding: 10px 20px;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #0ea5e9;
+    }
+    #result {
+      text-align: center;
+      font-size: 18px;
+      margin-top: 20px;
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📈 Nifty 50 Weekly Direction Predictor</h1>
+  <p style="text-align:center;">Enter last <b>5 working days</b> (Mon–Fri) data to predict the <b>next trading day's</b> direction.</p>
+
+  <table>
+    <tr>
+      <th>Day</th>
+      <th>Open</th>
+      <th>High</th>
+      <th>Low</th>
+      <th>Close</th>
+    </tr>
+    <tbody id="data-rows">
+      <script>
+        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        days.forEach((d, i) => {
+          document.write(`
+            <tr>
+              <td>${d}</td>
+              <td><input id="open${i+1}" type="number"></td>
+              <td><input id="high${i+1}" type="number"></td>
+              <td><input id="low${i+1}" type="number"></td>
+              <td><input id="close${i+1}" type="number"></td>
+            </tr>
+          `);
+        });
+      </script>
+    </tbody>
+  </table>
+
+  <div style="text-align:center;">
+    <button onclick="predictNextDay()">Predict Next Day</button>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    function predictNextDay() {
+      let opens = [], highs = [], lows = [], closes = [];
+      for (let i = 1; i <= 5; i++) {
+        opens.push(parseFloat(document.getElementById(`open${i}`).value) || 0);
+        highs.push(parseFloat(document.getElementById(`high${i}`).value) || 0);
+        lows.push(parseFloat(document.getElementById(`low${i}`).value) || 0);
+        closes.push(parseFloat(document.getElementById(`close${i}`).value) || 0);
+      }
+
+      if (closes.includes(0)) {
+        alert("Please enter complete data for all 5 working days.");
+        return;
+      }
+
+      const lastClose = closes[4];
+      const MA5 = closes.reduce((a, b) => a + b, 0) / 5;
+      const high = highs[4], low = lows[4], close = closes[4];
+      const pivot = (high + low + close) / 3;
+      const r1 = 2 * pivot - low;
+      const s1 = 2 * pivot - high;
+
+      // RSI-like logic
+      let upDays = 0, downDays = 0;
+      for (let i = 1; i < closes.length; i++) {
+        if (closes[i] > closes[i-1]) upDays++;
+        else if (closes[i] < closes[i-1]) downDays++;
+      }
+      const rsi = (upDays / (upDays + downDays)) * 100 || 50;
+
+      // Trend prediction based on technical mix
+      let bias;
+      if (lastClose > MA5 && rsi > 60 && close > pivot) bias = "📈 Bullish – Likely to rise next session";
+      else if (lastClose < MA5 && rsi < 40 && close < pivot) bias = "📉 Bearish – Possible decline next session";
+      else bias = "⚖️ Neutral / Range-bound – Wait for confirmation";
+
+      document.getElementById("result").innerHTML = `
+        <h3>📊 Prediction Summary</h3>
+        <p><b>5-Day MA:</b> ${MA5.toFixed(2)}<br>
+        <b>Pivot:</b> ${pivot.toFixed(2)} |
+        <b>R1:</b> ${r1.toFixed(2)} |
+        <b>S1:</b> ${s1.toFixed(2)}</p>
+        <p><b>RSI-like strength:</b> ${rsi.toFixed(1)}</p>
+        <p><b>Next Day Forecast:</b> ${bias}</p>
+      `;
+    }
+  </script>
+</body>
+</html>
