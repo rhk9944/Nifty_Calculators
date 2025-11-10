@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nifty 50 - Weekly Trend Predictor</title>
+  <title>Nifty 50 Weekly Predictor (2025–2029 Holidays)</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -11,24 +11,14 @@
       color: #e2e8f0;
       padding: 20px;
     }
-    h1 {
-      text-align: center;
-      color: #38bdf8;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
+    h1 { text-align: center; color: #38bdf8; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     th, td {
       border: 1px solid #334155;
       padding: 8px;
       text-align: center;
     }
-    th {
-      background: #1e293b;
-      color: #f1f5f9;
-    }
+    th { background: #1e293b; color: #f1f5f9; }
     input {
       width: 100%;
       padding: 5px;
@@ -37,6 +27,7 @@
       color: white;
       text-align: right;
     }
+    .holiday { color: #f87171; font-weight: bold; }
     button {
       background: #38bdf8;
       border: none;
@@ -47,9 +38,7 @@
       border-radius: 5px;
       margin-top: 10px;
     }
-    button:hover {
-      background: #0ea5e9;
-    }
+    button:hover { background: #0ea5e9; }
     #result {
       text-align: center;
       font-size: 18px;
@@ -62,33 +51,22 @@
 </head>
 <body>
 
-  <h1>📈 Nifty 50 Weekly Direction Predictor</h1>
-  <p style="text-align:center;">Enter last <b>5 working days</b> (Mon–Fri) data to predict the <b>next trading day's</b> direction.</p>
+  <h1>📈 Nifty 50 Weekly Predictor (with 5-Year Auto Holidays)</h1>
+  <p style="text-align:center;">Enter last week's data — system automatically detects NSE holidays (2025–2029).</p>
 
-  <table>
-    <tr>
-      <th>Day</th>
-      <th>Open</th>
-      <th>High</th>
-      <th>Low</th>
-      <th>Close</th>
-    </tr>
-    <tbody id="data-rows">
-      <script>
-        const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-        days.forEach((d, i) => {
-          document.write(`
-            <tr>
-              <td>${d}</td>
-              <td><input id="open${i+1}" type="number"></td>
-              <td><input id="high${i+1}" type="number"></td>
-              <td><input id="low${i+1}" type="number"></td>
-              <td><input id="close${i+1}" type="number"></td>
-            </tr>
-          `);
-        });
-      </script>
-    </tbody>
+  <table id="data-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Day</th>
+        <th>Open</th>
+        <th>High</th>
+        <th>Low</th>
+        <th>Close</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="data-rows"></tbody>
   </table>
 
   <div style="text-align:center;">
@@ -98,51 +76,158 @@
   <div id="result"></div>
 
   <script>
+    // 📅 NSE Major Holidays (2025–2029)
+    const nseHolidays = {
+      2025: {
+        "2025-01-26": "Republic Day",
+        "2025-03-14": "Holi",
+        "2025-04-14": "Ambedkar Jayanti",
+        "2025-04-18": "Good Friday",
+        "2025-05-01": "Maharashtra Day",
+        "2025-08-15": "Independence Day",
+        "2025-10-02": "Gandhi Jayanti",
+        "2025-10-24": "Diwali Balipratipada",
+        "2025-11-05": "Guru Nanak Jayanti",
+        "2025-12-25": "Christmas"
+      },
+      2026: {
+        "2026-01-26": "Republic Day",
+        "2026-03-03": "Maha Shivratri",
+        "2026-04-03": "Good Friday",
+        "2026-04-14": "Ambedkar Jayanti",
+        "2026-05-01": "Maharashtra Day",
+        "2026-08-15": "Independence Day",
+        "2026-09-04": "Ganesh Chaturthi",
+        "2026-10-02": "Gandhi Jayanti",
+        "2026-11-09": "Diwali",
+        "2026-12-25": "Christmas"
+      },
+      2027: {
+        "2027-01-26": "Republic Day",
+        "2027-03-15": "Holi",
+        "2027-04-02": "Good Friday",
+        "2027-04-14": "Ambedkar Jayanti",
+        "2027-05-01": "Maharashtra Day",
+        "2027-08-15": "Independence Day",
+        "2027-10-02": "Gandhi Jayanti",
+        "2027-11-02": "Diwali",
+        "2027-12-25": "Christmas"
+      },
+      2028: {
+        "2028-01-26": "Republic Day",
+        "2028-03-10": "Holi",
+        "2028-04-14": "Ambedkar Jayanti",
+        "2028-04-14": "Good Friday",
+        "2028-05-01": "Maharashtra Day",
+        "2028-08-15": "Independence Day",
+        "2028-10-02": "Gandhi Jayanti",
+        "2028-10-20": "Diwali",
+        "2028-12-25": "Christmas"
+      },
+      2029: {
+        "2029-01-26": "Republic Day",
+        "2029-03-01": "Holi",
+        "2029-03-30": "Good Friday",
+        "2029-04-14": "Ambedkar Jayanti",
+        "2029-05-01": "Maharashtra Day",
+        "2029-08-15": "Independence Day",
+        "2029-10-02": "Gandhi Jayanti",
+        "2029-11-08": "Diwali",
+        "2029-12-25": "Christmas"
+      }
+    };
+
+    // 🗓️ Get last working week (Mon–Fri)
+    function getLastWeekDates() {
+      const today = new Date();
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1) - 7; // last Monday
+      const monday = new Date(today.setDate(diff));
+      const dates = [];
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        dates.push(d);
+      }
+      return dates;
+    }
+
+    const rowsContainer = document.getElementById("data-rows");
+    const weekDates = getLastWeekDates();
+
+    weekDates.forEach((d, i) => {
+      const dateStr = d.toISOString().split("T")[0];
+      const year = d.getFullYear();
+      const dayName = d.toLocaleDateString("en-IN", { weekday: "long" });
+      const holidayList = nseHolidays[year] || {};
+      const holidayReason = holidayList[dateStr];
+
+      rowsContainer.innerHTML += `
+        <tr>
+          <td>${dateStr}</td>
+          <td>${dayName}</td>
+          <td><input id="open${i}" type="number" ${holidayReason ? "disabled" : ""}></td>
+          <td><input id="high${i}" type="number" ${holidayReason ? "disabled" : ""}></td>
+          <td><input id="low${i}" type="number" ${holidayReason ? "disabled" : ""}></td>
+          <td><input id="close${i}" type="number" ${holidayReason ? "disabled" : ""}></td>
+          <td class="${holidayReason ? 'holiday' : ''}">
+            ${holidayReason ? `🔴 ${holidayReason}` : "🟢 Open"}
+          </td>
+        </tr>
+      `;
+    });
+
+    // 📈 Prediction Logic
     function predictNextDay() {
-      let opens = [], highs = [], lows = [], closes = [];
-      for (let i = 1; i <= 5; i++) {
-        opens.push(parseFloat(document.getElementById(`open${i}`).value) || 0);
-        highs.push(parseFloat(document.getElementById(`high${i}`).value) || 0);
-        lows.push(parseFloat(document.getElementById(`low${i}`).value) || 0);
-        closes.push(parseFloat(document.getElementById(`close${i}`).value) || 0);
+      const closes = [], highs = [], lows = [];
+
+      for (let i = 0; i < 5; i++) {
+        const closeVal = parseFloat(document.getElementById(`close${i}`).value);
+        const highVal = parseFloat(document.getElementById(`high${i}`).value);
+        const lowVal = parseFloat(document.getElementById(`low${i}`).value);
+        if (!isNaN(closeVal)) {
+          closes.push(closeVal);
+          highs.push(highVal);
+          lows.push(lowVal);
+        }
       }
 
-      if (closes.includes(0)) {
-        alert("Please enter complete data for all 5 working days.");
+      if (closes.length < 3) {
+        alert("Please enter at least 3 days of data (holidays skipped).");
         return;
       }
 
-      const lastClose = closes[4];
-      const MA5 = closes.reduce((a, b) => a + b, 0) / 5;
-      const high = highs[4], low = lows[4], close = closes[4];
+      const lastClose = closes[closes.length - 1];
+      const MA5 = closes.reduce((a, b) => a + b, 0) / closes.length;
+      const high = highs[highs.length - 1];
+      const low = lows[lows.length - 1];
+      const close = closes[closes.length - 1];
       const pivot = (high + low + close) / 3;
       const r1 = 2 * pivot - low;
       const s1 = 2 * pivot - high;
 
-      // RSI-like logic
       let upDays = 0, downDays = 0;
       for (let i = 1; i < closes.length; i++) {
-        if (closes[i] > closes[i-1]) upDays++;
-        else if (closes[i] < closes[i-1]) downDays++;
+        if (closes[i] > closes[i - 1]) upDays++;
+        else if (closes[i] < closes[i - 1]) downDays++;
       }
       const rsi = (upDays / (upDays + downDays)) * 100 || 50;
 
-      // Trend prediction based on technical mix
       let bias;
-      if (lastClose > MA5 && rsi > 60 && close > pivot) bias = "📈 Bullish – Likely to rise next session";
-      else if (lastClose < MA5 && rsi < 40 && close < pivot) bias = "📉 Bearish – Possible decline next session";
-      else bias = "⚖️ Neutral / Range-bound – Wait for confirmation";
+      if (lastClose > MA5 && rsi > 60 && close > pivot) bias = "📈 Bullish – Likely uptrend next session";
+      else if (lastClose < MA5 && rsi < 40 && close < pivot) bias = "📉 Bearish – Possible downtrend";
+      else bias = "⚖️ Neutral – Sideways consolidation";
 
       document.getElementById("result").innerHTML = `
-        <h3>📊 Prediction Summary</h3>
-        <p><b>5-Day MA:</b> ${MA5.toFixed(2)}<br>
-        <b>Pivot:</b> ${pivot.toFixed(2)} |
-        <b>R1:</b> ${r1.toFixed(2)} |
-        <b>S1:</b> ${s1.toFixed(2)}</p>
-        <p><b>RSI-like strength:</b> ${rsi.toFixed(1)}</p>
-        <p><b>Next Day Forecast:</b> ${bias}</p>
+        <h3>📊 Next Day Forecast</h3>
+        <p><b>Included Days:</b> ${closes.length} (holidays skipped)</p>
+        <p><b>MA5:</b> ${MA5.toFixed(2)} | <b>Pivot:</b> ${pivot.toFixed(2)} | 
+        <b>R1:</b> ${r1.toFixed(2)} | <b>S1:</b> ${s1.toFixed(2)}</p>
+        <p><b>RSI-like:</b> ${rsi.toFixed(1)}</p>
+        <p><b>Prediction:</b> ${bias}</p>
       `;
     }
   </script>
+
 </body>
 </html>
